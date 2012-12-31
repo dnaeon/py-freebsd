@@ -1,0 +1,9 @@
+# $FreeBSD$
+
+include COPYRIGHT MANIFEST.in AUTHORS TUTORIAL CONTRIBUTORS
+
+recursive-include src *.h *.c *.def
+recursive-include tests *.py
+recursive-include tools *.py
+
+global-exclude */CVS/* *.pyc *.pyo

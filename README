@@ -1,0 +1,49 @@
+Py-FreeBSD version 0.9.3
+========================
+
+Copyright(C) Hye-Shik Chang, 2002-2005.
+$FreeBSD$
+
+
+
+Introduction
+------------
+
+This package provides Python Interface to FreeBSD-Specific
+library functions.
+
+
+Requirement
+-----------
+
+This package requires FreeBSD 4 or higher with Python 2.3+.
+
+
+Supported Functions
+-------------------
+
+  * Newly supported functions and extension types from 0.9
+
+    chflags fchflags geom_getxml gethostname kevent kqueue lchflags
+    sethostname sysctl sysctldescr sysctlmibtoname sysctlnametomib
+
+  * Supported since 0.2
+
+    ifstats ipstats tcpstats udpstats
+
+  * Supported since 0.1
+
+    fstatfs getfsent getfsfile getfsspec getfsstat getloadavg
+    getlogin getosreldate getpriority getprogname getpwent getpwnam
+    getpwuid getquota getrlimit getrusage jail ktrace quotaoff
+    quotaon quotasync reboot sendfile setlogin setpriority setproctitle
+    setprogname setquota setrlimit statfs
+
+
+Author
+------
+
+Hye-Shik Chang <perky@FreeBSD.org>
+
+Any comments, suggestions, and/or patches are very welcome.
+Thank you for using Py-FreeBSD!

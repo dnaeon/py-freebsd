@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: py-freebsd
+Version: 0.9.3
+Summary: Python Interface to FreeBSD Platform Library
+Home-page: UNKNOWN
+Author: Hye-Shik Chang
+Author-email: perky@FreeBSD.org
+License: BSD
+Description: UNKNOWN
+Platform: freebsd4
+Platform: freebsd5
+Platform: freebsd6

@@ -1,0 +1,11 @@
+Rui Lopes <rui@ruilopes.com>
+  contributed a patch adding some constants on statfs functionality.
+
+Soeren Straarup <xride@x12.dk>
+  contributed code for geom_getxml() method.
+
+Michal Suszko <Michal@dry.pl>
+  ported py-freebsd to FreeBSD 5.
+
+Craig Rodrigues <rodrigc@crodrigues.org>
+  reported a 7-current incompatibility.

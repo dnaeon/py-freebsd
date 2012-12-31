@@ -1,0 +1,269 @@
+Before trying any example session below, please import all contents
+of freebsd module onto global namespaced
+
+>>> from freebsd import *
+>>> from freebsd.const import *
+
+
+=======
+chflags
+=======
+
+>>> chflags('COPYRIGHT', UF_IMMUTABLE|UF_APPEND)
+>>> open('COPYRIGHT', 'w')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in ?
+IOError: [Errno 1] Operation not permitted: 'COPYRIGHT'
+>>> chflags('COPYRIGHT', 0)
+>>> open('COPYRIGHT', 'w')
+<open file 'COPYRIGHT', mode 'w' at 0x81c9578>
+>>> fchflags(_.fileno(), UF_IMMUTABLE)
+>>> f = open('COPYRIGHT', 'w')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in ?
+IOError: [Errno 1] Operation not permitted: 'COPYRIGHT'
+>>> lchflags('COPYRIGHT', 0)
+
+
+=====
+fstab
+=====
+
+>>> fs = getfsent()
+>>> fs[0], len(fs)
+({'vfstype': 'swap', 'passno': 0, 'file': 'none', 'mntops': 'sw', 'freq': 0, 'type': 'sw', 'spec': '/dev/da0s1b'}, 7)
+>>> getfsspec('devfs')
+{'vfstype': 'devfs', 'passno': 0, 'file': '/usr/pub/dev', 'mntops': 'rw', 'freq': 0, 'type': 'rw', 'spec': 'devfs'}
+>>> getfsfile('/usr')
+{'vfstype': 'ufs', 'passno': 2, 'file': '/usr', 'mntops': 'rw', 'freq': 2, 'type': 'rw', 'spec': '/dev/da0s1f'}
+
+
+====
+geom
+====
+
+>>> from xml.dom.minidom import parseString
+>>> document = parseString(geom_getxml())
+>>> [str(node.childNodes[0].nodeValue) for node in document.getElementsByTagName('name')]
+['DISK', 'da0', 'da0', 'DEV', 'da0s1f', 'da0s1e', 'da0s1c', 'da0s1b', 'da0s1a', 'da0s1', 'da0', 'acd0', 'fd0', 'SWAP', 'swap', 'MBREXT', 'MBR', 'da0', 'da0s1', 'BSD', 'da0s1', 'da0s1f', 'da0s1e', 'da0s1c', 'da0s1b', 'da0s1a', 'ACD', 'acd0', 'acd0', 'FD', 'fd0', 'fd0', 'MD', 'GPT']
+
+
+========
+hostname
+========
+
+>>> gethostname()
+'miffy.openlook.org'
+>>> sethostname('freefall.openlook.org')  # not a superuser
+Traceback (most recent call last):
+  File "<stdin>", line 1, in ?
+OSError: [Errno 1] Operation not permitted
+
+
+====
+jail
+====
+
+(root privilege is required for this session)
+
+>>> gethostname()
+'miffy.openlook.org'
+>>> jail('/usr/pub', 'outpost.openlook.org', '211.236.182.73')
+>>> gethostname() # we're in the jail now.
+'outpost.openlook.org'
+
+
+======
+kqueue
+======
+
+# basic polling using kqueue
+
+>>> import os
+>>> rd, wr = os.pipe()
+>>> kq = kqueue()
+>>> kq.event([kevent(rd)], 0)
+[]
+>>> os.write(wr, 'hehe')
+4
+>>> kq.event(None, 1)
+[<kevent ident=5 filter=EVFILT_READ flags=EV_ADD|EV_ENABLE fflags=0 data=4 udata=None>]
+
+# utilizing kevent.udata for per-descriptor callback keep
+
+>>> def reply(ev):
+...     name = os.read(ev.ident, 10)
+...     os.write(wr, 'hello, '+name)
+...
+>>> kq.addevent(rd, udata=reply)
+>>> kq.event(None, 1)
+[<kevent ident=5 filter=EVFILT_READ flags=EV_ADD|EV_ENABLE fflags=0 data=4 udata=<function reply at 0x81cfaac>>]
+>>> _[0].udata(_[0])
+>>> os.read(rd, 20)
+'hello, hehe'
+
+# delete kevent from kqueue
+
+>>> kq.event([kevent(rd, EVFILT_READ, EV_DELETE|EV_DISABLE)], 0)
+[]
+>>> os.write(wr, 'yay!')
+4
+>>> kq.event(None, 1, 5)
+[]
+
+
+======
+ktrace
+======
+
+>>> import os, time
+>>> open('tracefile', 'w').close()
+>>> ktrace('tracefile', KTROP_SET, KTRFAC_SYSCALL, os.getpid())
+>>> time.time()
+1111856671.1571431
+>>> ktrace('tracefile', KTROP_CLEAR, KTRFAC_SYSCALL, os.getpid())
+>>> os.system('kdump -f tracefile | grep gettimeofday')
+ 71300 python   CALL  gettimeofday(0xbfbfe258,0)
+0
+
+
+=====
+login
+=====
+
+(root privilege is required for this session)
+
+>>> getlogin()
+'perky'
+>>> setlogin('tenma')
+>>> getlogin()
+'tenma'
+
+
+=======
+netstat
+=======
+
+>>> ipstats()
+{'fragtimeout': 18L, 'reassembled': 113L, 'fastforward': 0L, ...
+>>> tcpstats()
+{'sndrexmitpack': 487207L, 'rcvwinupd': 1014541L, 'timeoutdrop': 5055L, ...
+>>> udpstats()
+{'hdrops': 0L, 'badlen': 0L, 'delivered': 2569901L, 'noportbcast': 841425L, ...
+>>> ifstats()['fxp0']
+{'metric': 0L, 'snd_len': 0, 'ierrors': 0L, 'snd_maxlen': 127, 'physical': ...
+
+
+=======
+process
+=======
+
+>>> getprogname()
+'python'
+>>> setprogname('rumble')
+>>> getprogname()
+'rumble'
+>>> setproctitle('py-freebsd testing session')
+>>> os.system('ps auxw|grep freebsd')
+perky 71593  0.0  0.8  6288 4176  p8  S+    2:10AM   0:00.16 global: py-freebsd testing session (python)
+
+
+====
+pwdb
+====
+
+>>> getpwuid(0)
+{'shell': '/usr/local/bin/zsh', 'name': 'root', 'passwd': '*', 'fields': 5087, 'gid': 0, 'gecos': 'Charlie &', 'dir': '/root', 'expire': 0, 'class': '', 'change': 0, 'uid': 0}
+>>> getpwnam('perky')
+{'shell': '/usr/local/bin/zsh', 'name': 'perky', 'passwd': '*', 'fields': 5087, 'gid': 0, 'gecos': 'Hye-Shik Chang', 'dir': '/usr/home/perky', 'expire': 0, 'class': '', 'change': 0, 'uid': 1000}
+>>> [u['name'] for u in getpwent()][:5]
+['root', 'toor', 'daemon', 'operator', 'bin']
+>>> from itertools import groupby
+>>> [(k, len(list(g))) for k, g in groupby(sorted(u['shell'] for u in getpwent()))]
+[('', 1), ('/bin/sh', 2), ('/bin/tcsh', 1), ('/sbin/nologin', 19), ('/usr/libexec/uucp/uucico', 1), ('/usr/local/bin/zsh', 2), ('/usr/sbin/nologin', 14)]
+
+
+=====
+quota
+=====
+
+(tutorial for quota functions is not available because I don't have
+ any quota-enabled systems at all.)
+
+
+======
+reboot
+======
+
+(root privilege is required for this session)
+
+>>> reboot()
+... (oops~)
+
+
+========
+resource
+========
+
+>>> getrlimit(RLIMIT_NPROC)
+(3661L, 3661L)
+>>> getrlimit(RLIMIT_VMEM)
+(None, None)
+>>> setrlimit(RLIMIT_VMEM, 10*1024*1024, 20*1024*1024)
+>>> getrlimit(RLIMIT_VMEM)
+(10485760L, 20971520L)
+>>> getpriority(PRIO_PROCESS, RUSAGE_SELF)
+0
+>>> setpriority(PRIO_PROCESS, RUSAGE_SELF, 2)
+>>> getpriority(PRIO_PROCESS, RUSAGE_SELF)
+2
+>>> getrusage(RUSAGE_SELF)
+{'majflt': 0, 'ixrss': 50680, 'minflt': 719, 'inblock': 0, 'nsignals': 0, 'nswap': 0, 'idrss': 98264, 'msgrcv': 0, 'maxrss': 4360, 'isrss': 8960, 'nvcsw': 11633, 'oublock': 0, 'stime': 0.22476299999999999, 'msgsnd': 0, 'nivcsw': 75, 'utime': 0.38036799999999998}
+
+
+======
+statfs
+======
+
+>>> statfs('/usr')
+{'files': 1881598, 'iosize': 16384, 'asyncwrites': 15055433, 'blocks': 7494418, 'syncreads': 7426249, 'asyncreads': 95852, 'bsize': 2048, 'mntonname': '/usr', 'fstypename': 'ufs', 'syncwrites': 110398, 'ffree': 1361927, 'mntfromname': '/dev/da0s1f', 'flags': 2101248, 'bfree': 987634, 'owner': 0, 'bavail': 388081, 'type': 1, 'fsid': (0, 0)}
+>>> fstatfs(os.open('/COPYRIGHT', 0))
+{'files': 64894, 'iosize': 16384, 'asyncwrites': 422270, 'blocks': 258031, 'syncreads': 35937, 'asyncreads': 622, 'bsize': 2048, 'mntonname': '/', 'fstypename': 'ufs', 'syncwrites': 58284, 'ffree': 62083, 'mntfromname': '/dev/da0s1a', 'flags': 20480, 'bfree': 209961, 'owner': 0, 'bavail': 189319, 'type': 1, 'fsid': (0, 0)}
+>>> [(fs['mntonname'], fs['fstypename']) for fs in getfsstat(0)]
+[('/', 'ufs'), ('/dev', 'devfs'), ('/usr', 'ufs'), ('/var', 'ufs'), ('/proc', 'procfs'), ('/usr/pub/dev', 'devfs'), ('/var/named/dev', 'devfs')]
+
+
+======
+sysctl
+======
+
+>>> getloadavg()
+(0.107421875, 0.05322265625, 0.0078125)
+>>> getosreldate()
+600020
+
+>>> sysctl('kern.hostname')
+'miffy.openlook.org'
+>>> sysctlnametomib('kern.hostname')
+(1, 10)
+>>> sysctlmibtoname((1, 10))
+'kern.hostname'
+>>> sysctldescr('kern.ostype')
+'Operating system type'
+>>> sysctl('net.inet.udp')
+['net.inet.udp.checksum', 'net.inet.udp.stats', 'net.inet.udp.maxdgram', 'net.inet.udp.recvspace', 'net.inet.udp.pcblist', 'net.inet.udp.log_in_vain', 'net.inet.udp.blackhole', 'net.inet.udp.strict_mcast_mship', 'net.inet.udp.getcred']
+>>> sysctl(sysctlnametomib('net.inet.udp'))
+[(4, 2, 17, 1), (4, 2, 17, 2), (4, 2, 17, 3), (4, 2, 17, 4), (4, 2, 17, 5), (4, 2, 17, 684), (4, 2, 17, 685), (4, 2, 17, 686), (4, 2, 17, 687)]
+
+(need root privilege now)
+
+>>> sysctl('net.inet.udp.maxdgram')
+9216
+>>> sysctl('net.inet.udp.maxdgram', 9232)
+9216
+>>> sysctl('net.inet.udp.maxdgram')
+9232
+>>> sysctl('net.inet.udp.maxdgram', 9216)
+9232
+>>> sysctl('net.inet.udp.maxdgram')
+9216
