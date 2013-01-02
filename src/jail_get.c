@@ -26,25 +26,22 @@
 
 static char PyFB_jail_get__doc__[] =
 "jail_get(jid):\n"
-"The jail_get() system call retrieves jail parameters."
-"The jail to read can be specified by using either the jail's jid or name."
-"The returned parameters about the jails are the the jail's jid, name, path, "
-"hostname and IPv4 address."
-"In order to list the parameters of all jails use 0 (zero) as the jid.";
+"The jail_get() system call retrieves jail parameters.\n"
+"The jail to read can be specified by using either the jail's jid or name.\n"
+"The returned parameters are the the jail's jid, name, path, hostname and IPv4 address.\n"
+"In order to list the parameters of all jails use 0 (zero) as the jid.\n";
 
 static PyObject *
 PyFB_jail_get(PyObject *self, PyObject *args)
 {
-	PyObject *r;
-        struct iovec fbsd_jparams[10];
+	PyObject *r, *d;
+        struct iovec jparams[10];
 	struct in_addr ip4;
 	char path[MAXPATHLEN], hostname[MAXHOSTNAMELEN], name[MAXHOSTNAMELEN];
 	int jid;
 
         if (!PyArg_ParseTuple(args, "i:jail_get", &jid))
 		return NULL;
-
-	assert (jid >= 0);
 
 	*(const void **) &jparams[0].iov_base = "lastjid";
 	jparams[0].iov_len = sizeof("lastjid");
@@ -72,8 +69,23 @@ PyFB_jail_get(PyObject *self, PyObject *args)
 	jparams[9].iov_len = sizeof(struct in_addr);
 
 	r = PyDict_New();
-	
-        while ((jid = jail_get(jparams, 10, 0)) > 0) {
+
+	if (jid == 0) {
+		while ((jid = jail_get(jparams, 10, 0)) > 0) {
+			d = PyDict_New();
+			SETDICT_INT(d, "jid", jid);
+			SETDICT_STR(d, "ip4", inet_ntoa(ip4));
+			SETDICT_STR(d, "path", path);
+			SETDICT_STR(d, "hostname", hostname);
+			PyDict_SetItemString(r, name, d);
+		}
+	} else {
+		/*
+		 * Decrement the jid by 1 to allow fetching parameters of the jid passed.
+		 * See jail(2) for more info.
+		 */
+		jid--;
+		jid = jail_get(jparams, 10, 0);
 		SETDICT_INT(r, "jid", jid);
 		SETDICT_STR(r, "name", name);
 		SETDICT_STR(r, "ip4", inet_ntoa(ip4));
